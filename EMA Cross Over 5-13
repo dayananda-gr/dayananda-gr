@@ -1,0 +1,194 @@
+import yfinance as yf
+import numpy as np
+import matplotlib.pyplot as plt
+import pandas as pd
+import pandas_ta as ta
+import math
+import csv
+import datetime
+import requests,time
+import datetime 
+from dhanhq import dhanhq
+
+#def datetotimestamp(date):
+#    time_tuple = date.timetuple()
+ #   timestamp = round(time.mktime(time_tuple))
+#    return timestamp
+dhan = dhanhq("1100842544","eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzUxMiJ9.eyJpc3MiOiJkaGFuIiwicGFydG5lcklkIjoiIiwiZXhwIjoxNzI5Mzk5Mzg3LCJ0b2tlbkNvbnN1bWVyVHlwZSI6IlNFTEYiLCJ3ZWJob29rVXJsIjoiIiwiZGhhbkNsaWVudElkIjoiMTEwMDg0MjU0NCJ9.m9KR8FEMUf9ghmzXTCkmhWA7LTSIj8Azrh0z2S3hQVG8aDWVLMeR20LpExONWjslBLQBEQY0AAdbbve-g57Ckg")
+Buy = False
+Sell= False
+start_time = datetime.time(7, 15)  # 4:45 AM
+end_time = datetime.time(23, 55)  # 10:30 AM
+exit_time = 180
+start = (2023,9,20)
+end = datetime.datetime.now()
+quantity = 100
+URL = "https://query1.finance.yahoo.com/v8/finance/chart/NIFTY_FIN_SERVICE.NS?interval=5m"
+#URL='https://priceapi.moneycontrol.com/techCharts/indianMarket/stock/history?symbol=RELIANCE&resolution=15m&from='+str(start)+'&to='+str(end)+'&countback=24&currencyCode=INR'
+#print(URL)
+#Nifty50 = ['TATACHEM.NS','LTIM.NS','EXIDEIND.NS','INFY.NS','MARICO.NS','GODREJCP.NS','HDFCBANK.NS','BRITANNIA.NS','BPCL.NS','BHARTIARTL.NS','ADANIPORTS.NS','ASIANPAINT.NS','BAJAJ-AUTO.NS','BAJAJFINSV.NS','BAJFINANCE.NS','CIPLA.NS','COALINDIA.NS','DIVISLAB.NS','DRREDDY.NS','EICHERMOT.NS','GAIL.NS','GRASIM.NS','HCLTECH.NS','HDFCLIFE.NS','HEROMOTOCO.NS','HINDALCO.NS','ICICIBANK.NS','INDUSINDBK.NS','IOC.NS','ITC.NS','JSWSTEEL.NS','KOTAKBANK.NS','LT.NS','M&M.NS','MARUTI.NS','NESTLEIND.NS','NTPC.NS','ONGC.NS','POWERGRID.NS','RELIANCE.NS','SBILIFE.NS','SBIN.NS','SHREECEM.NS','SUNPHARMA.NS','TATAMOTORS.NS','TATASTEEL.NS','TCS.NS','TECHM.NS','TITAN.NS','ULTRACEMCO.NS','UPL.NS','WIPRO.NS',
+ #           'COROMANDEL.NS','OFSS.NS','BSOFT.NS','HAVELLS.NS','METROPOLIS.NS','ZEEL.NS','APOLLOHOSP.NS','PEL.NS','LALPATHLAB.NS','IPCALAB.NS','VOLTAS.NS','ESCORTS.NS','BALKRISIND.NS','AARTIIND.NS','INDIACEM.NS','INDIGO.NS','GLENMARK.NS','DABUR.NS','BERGEPAINT.NS','DALBHARAT.NS','AUBANK.NS','AMARAJABAT.NS','HAL.NS','COFORGE.NS','TORNTPHARM.NS','ASTRAL.NS']
+Nifty50 = ['NIFTY_FIN_SERVICE.NS']
+Trade_list = []
+
+
+def scrape_finnifty_price_PE(Close_price):       
+        price=int(Close_price)
+        val = price
+        val2 = math.fmod(val, 50)
+        x = val - val2
+        #print(x)
+        abs_val = "{:.0f}".format(x)
+        PE_PRICE = "{}".format("{:.0f}".format(x + 0))
+        PE_PRICE_2 = "{}".format("{:.0f}".format(x + 50))
+        #print('\n Identified ATM:',"{:.0f}".format(x), 'So OTM (ATM-100) would be :',PE_PRICE_2)
+        with open('FINNIFTY.csv', 'r') as csv_file:
+            csv_reader = csv.reader(csv_file)
+            next(csv_reader)
+            for column in csv_reader:
+                    if column[13] == PE_PRICE_2 and column[14] == 'PE' :
+                    #Sell Existing Position
+                        #print('Security ID ',column[2])
+                        securityID = column[2]
+        return securityID
+    
+
+
+def scrape_finnifty_price_CE(Close_price):       
+        price=int(Close_price)        
+        val = price
+        val2 = math.fmod(val, 50)
+        x = val - val2
+        #print(x)
+        abs_val = "{:.0f}".format(x)
+        CE_PRICE = "{}".format("{:.0f}".format(x + 0))
+        CE_PRICE_2 = "{}".format("{:.0f}".format(x - 50))
+        print('\n Identified ATM:',"{:.0f}".format(x), 'So ITM (ATM-50) would be :',CE_PRICE_2)
+        with open('FINNIFTY.csv', 'r') as csv_file:
+            csv_reader = csv.reader(csv_file)
+            next(csv_reader)
+            for column in csv_reader:
+                    if column[13] == CE_PRICE_2 and column[14] == 'CE' :
+                    #Sell Existing Position
+                        #print('Security ID ',column[2])
+                        security_id = column[2]
+        return security_id
+    
+
+
+def buy_order(security_id):
+   dhan.place_order(security_id=security_id,  #NiftyPE
+    exchange_segment=dhan.FNO,
+    transaction_type=dhan.BUY,
+    quantity=quantity,
+    order_type=dhan.MARKET,
+    product_type=dhan.INTRA,
+    price=0)
+   print("Order Placed ")   
+    
+def sell_order(security_id):
+   dhan.place_order(security_id=security_id,  #NiftyPE
+    exchange_segment=dhan.FNO,
+    transaction_type=dhan.SELL,
+    quantity=quantity,
+    order_type=dhan.MARKET,
+    product_type=dhan.INTRA,
+    price=0)  
+   print("Order Squared Off! ") 
+
+def levels(stock):
+ df = yf.download(stock,period='5d',interval='5m')
+ df['EMA5'] = ta.ema(df['Close'], length=5)
+ df['EMA10'] = ta.ema(df['Close'], length=10)
+ df['EMA13'] = ta.ema(df['Close'], length=13)
+ df['RSI']=ta.rsi(df.Close, length=16)
+ df = df.dropna()
+ #print(df)
+ 
+ return df
+
+
+ 
+
+while True:
+    #time.sleep(10)
+
+    current_time = datetime.datetime.now().time()
+    print("Current time is ",current_time)
+    time.sleep(3)    
+    # Check if current time is within the time window
+    if start_time <= current_time <= end_time:    
+     print('waiting for EMA 5 to 13 CROSSOVER on FINNIFTY ')
+     for stock in Nifty50:
+      print(stock)
+      df = levels(stock)
+      print(df)
+      Close_price=df.Close.iloc[-1]
+      print(Close_price)
+      #print(dhan.get_positions())
+      CE_security_id = scrape_finnifty_price_CE(Close_price)
+      print('ATM CE',CE_security_id)
+      PE_security_id = scrape_finnifty_price_PE(Close_price)
+      print('ATM PE',PE_security_id)
+      #buy_order(security_id)
+      
+      
+      
+     if df.EMA5.iloc[-2] < df.EMA13.iloc[-2] and df.EMA5.iloc[-1] > df.EMA13.iloc[-1] and df.RSI.iloc[-1] > 50 :
+           if Buy == False:              
+             print(" EMA 5 Crossed above EMA 13")
+             security_id = CE_security_id
+             buy_order(security_id)
+             CE_Existing_trade= security_id
+             Buy = True       
+             #print(dhan.get_positions())
+             #buyprice = dhan.get_positions()
+             #print(buyprice)
+             #entry= buyprice['data'][6]['buyAvg']
+            
+             # print(dhan.get_order_by_id())
+
+           
+            #modify order  
+           #dhan.modify_order(order_id, order_type, leg_name, quantity, price, trigger_price, disclosed_quantity, validity)   
+     elif  df.EMA5.iloc[-2] > df.EMA13.iloc[-2] and df.EMA5.iloc[-1] < df.EMA13.iloc[-1] and df.RSI.iloc[-1] < 50:          
+           if Sell == False:  
+             security_id = PE_security_id                          
+             buy_order(security_id)
+             Existing_trade = security_id
+             Sell = True
+
+             # Buy Exit criteria
+     elif  df.EMA5.iloc[-2] > df.EMA10.iloc[-2] and df.EMA5.iloc[-1] < df.EMA10.iloc[-1]:
+            if Buy == True:
+              security_id = CE_Existing_trade
+              sell_order(security_id)
+              Buy = False
+
+     elif  df.EMA5.iloc[-2] < df.EMA10.iloc[-2] and df.EMA5.iloc[-1] > df.EMA10.iloc[-1]:
+            if Sell == True:  
+              security_id = Existing_trade
+              sell_order(security_id)
+              Sell = False   
+
+     
+     elif  current_time >= end_time:        
+            exit_time_start = datetime.datetime.now()
+            exit_time_end = datetime.datetime.combine(datetime.date.today(), end_time) - datetime.timedelta(seconds=exit_time)
+            while datetime.datetime.now() < exit_time_end:
+             print(f"Exiting trade in {round((exit_time_end - datetime.datetime.now()).total_seconds())} seconds.")
+             time.sleep(1)
+             # Exit the trade here
+             if Buy == True:
+              security_id= CE_Existing_trade
+              sell_order(security_id)              
+              Buy = False
+             elif Sell == True:
+              security_id = Existing_trade
+              sell_order(security_id)            
+              Sell = False 
+
+            print("Trade exited successfully!")  
+    else  :
+        print("Market Closed ")
+       
